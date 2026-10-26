@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Controle de Cartões</title>
+<meta name="description" content="Controle pessoal de despesas, receitas e cartões.">
+<meta name="theme-color" content="#10201D">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cartões">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="./styles.css">
+<script>try{var t=localStorage.getItem("tema");if(t==="claro"||t==="escuro")document.documentElement.dataset.theme=t==="claro"?"light":"dark"}catch(e){}</script>
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-painel" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></symbol>
+  <symbol id="i-lancar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="i-planilha" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M3 10h18M3 15h18M9 4v16"/></symbol>
+  <symbol id="i-cartoes" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M2.5 10h19M6 15h4"/></symbol>
+  <symbol id="i-ajustes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+</svg>
+
+<div class="boot" id="boot">Carregando…</div>
+
+<!-- LOGIN -->
+<div class="auth" id="auth" hidden>
+  <div class="authbox">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Controle de Cartões</b></div>
+    <div><h1 id="authTitle">Entrar</h1><p class="muted" id="authSub" style="margin-top:4px">Acesse seu controle financeiro.</p></div>
+    <div class="setupwarn" id="setupWarn" hidden>Falta configurar o Supabase: preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> no arquivo <code>config.js</code>.</div>
+    <form id="authForm" novalidate>
+      <div class="field" id="aEmailF"><label for="aEmail">E-mail</label><input id="aEmail" type="email" autocomplete="email" required></div>
+      <div class="field" id="aPassF"><label for="aPass">Senha</label><input id="aPass" type="password" autocomplete="current-password" minlength="6" required></div>
+      <button class="btn" type="submit" id="aSubmit">Entrar</button>
+      <div class="msg" id="aMsg" role="status"></div>
+    </form>
+    <div class="authlinks"><button type="button" class="linkbtn" id="aToggle">Criar conta</button><button type="button" class="linkbtn" id="aForgot">Esqueci minha senha</button></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" hidden>
+  <nav class="side" aria-label="Menu principal">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Controle de Cartões</b></div>
+    <div class="navlist" id="sideNav"></div>
+    <div class="cta">
+      <button type="button" data-go="lancar">+ Novo lançamento</button>
+      <div class="user"><span id="userEmail"></span><button type="button" data-logout>Sair</button></div>
+    </div>
+  </nav>
+
+  <main class="content">
+    <div class="inner">
+      <div class="mobilebrand"><span class="mark" aria-hidden="true"></span><b>Controle de Cartões</b></div>
+      <header class="topbar">
+        <div class="t"><h1 id="pageTitle">Painel</h1><p id="pageSub"></p></div>
+        <div class="monthnav" id="monthNav" role="group" aria-label="Mês de referência">
+          <button type="button" id="prevM" aria-label="Mês anterior">‹</button>
+          <div class="m" id="mLabel">—</div>
+          <button type="button" id="nextM" aria-label="Próximo mês">›</button>
+        </div>
+      </header>
+
+      <!-- PAINEL -->
+      <section class="page" id="pg-painel">
+        <div class="kpis" id="kpis"></div>
+        <div class="g2">
+          <div class="panel">
+            <div class="panel-head"><h2>Receitas e despesas</h2><span class="hint">12 meses · clique para abrir o mês</span></div>
+            <div class="chartbox" id="chartRD"></div>
+            <div class="legend"><span><i style="background:var(--pos)"></i>receitas</span><span><i style="background:var(--neg)"></i>despesas</span><span><i style="background:repeating-linear-gradient(135deg,var(--neg) 0 2px,var(--neg-soft) 2px 5px)"></i>parcelas futuras já comprometidas</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Despesas por categoria</h2><span class="hint" id="catHint"></span></div>
+            <div id="donut"></div>
+          </div>
+        </div>
+        <div class="g3">
+          <div class="panel"><div class="panel-head"><h2>Limite dos cartões</h2><button class="linkbtn" data-go="cartoes">Ver cartões</button></div><div id="limits"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Por forma de pagamento</h2></div><div class="bars" id="byPag"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Receitas por origem</h2></div><div class="bars" id="byRec"></div></div>
+        </div>
+        <div class="g2e">
+          <div class="panel"><div class="panel-head"><h2>Maiores despesas do mês</h2><button class="linkbtn" data-go="planilha">Abrir planilha</button></div><div class="tablewrap"><table><tbody id="topDesp"></tbody></table></div></div>
+          <div class="panel"><div class="panel-head"><h2>Gastos que se repetem</h2><span class="hint">mesma descrição, todo o período</span></div><div class="tablewrap"><table><thead><tr><th>Gasto</th><th class="r">Vezes</th><th class="r">Total</th><th class="r">Média</th></tr></thead><tbody id="repet"></tbody></table></div></div>
+        </div>
+        <div class="panel"><div class="panel-head"><h2>Parcelas a vencer</h2><span class="hint">compras parceladas nos próximos meses</span></div><div class="tablewrap"><table><thead><tr><th>Compra</th><th>Cartão</th><th class="r" id="fh1"></th><th class="r" id="fh2"></th><th class="r" id="fh3"></th><th class="r">Restante</th></tr></thead><tbody id="futuras"></tbody></table></div></div>
+      </section>
+
+      <!-- LANÇAR -->
+      <section class="page" id="pg-lancar" hidden>
+        <div class="formgrid">
+          <div class="panel">
+            <div class="panel-head"><h2 id="formTitle">Novo lançamento</h2></div>
+            <div class="seg big" role="group" aria-label="Tipo de lançamento"><button type="button" class="desp" data-kind="despesa" aria-pressed="true">Despesa</button><button type="button" class="rec" data-kind="receita" aria-pressed="false">Receita</button></div>
+            <form id="lForm" autocomplete="off" novalidate>
+              <div class="field"><label for="lDesc">Descrição</label><input id="lDesc" list="descList" placeholder="Ex.: Mercado Extra" maxlength="120"><datalist id="descList"></datalist></div>
+              <div class="row2">
+                <div class="field"><label for="lValor" id="lValorLbl">Valor total</label><div class="money"><span>R$</span><input id="lValor" inputmode="decimal" placeholder="0,00"></div></div>
+                <div class="field"><label for="lData">Data</label><input id="lData" type="date"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="lCat">Categoria</label><select id="lCat"></select></div>
+                <div class="field" id="pagField"><label for="lPag">Pagamento</label><select id="lPag"></select></div>
+              </div>
+              <div class="field" id="parcField"><label for="lParc">Parcelas</label><select id="lParc"></select></div>
+              <div class="field"><label for="lObs">Observação <span class="muted">(opcional)</span></label><textarea id="lObs" rows="2"></textarea></div>
+              <div class="hintline num" id="lHint"></div>
+              <div class="btnrow" id="bNew"><button class="btn" type="submit" id="bSubmit">Lançar despesa</button></div>
+              <div class="btnrow" id="bEdit" hidden><button class="btn" type="submit">Salvar alterações</button><button class="btn ghost" type="button" id="bCancel">Cancelar</button><button class="btn danger" type="button" id="bDel">Excluir</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Lançados recentemente</h2><button class="linkbtn" data-go="planilha">Ver todos</button></div>
+            <div class="recent" id="recent"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANILHA -->
+      <section class="page" id="pg-planilha" hidden>
+        <div class="panel">
+          <div class="toolbar">
+            <div class="field wide"><label for="pQ">Buscar</label><input id="pQ" type="search" placeholder="Descrição ou observação"></div>
+            <div class="field"><label for="pPer">Período</label><select id="pPer"><option value="mes">Mês selecionado</option><option value="ano">Ano do mês selecionado</option><option value="tudo">Todo o período</option><option value="custom">Personalizado</option></select></div>
+            <div class="field" id="pDeF" hidden><label for="pDe">De</label><input id="pDe" type="date"></div>
+            <div class="field" id="pAteF" hidden><label for="pAte">Até</label><input id="pAte" type="date"></div>
+            <div class="field"><label for="pTipo">Tipo</label><select id="pTipo"><option value="todos">Receitas e despesas</option><option value="despesa">Só despesas</option><option value="receita">Só receitas</option></select></div>
+            <div class="field"><label for="pCat">Categoria</label><select id="pCat"></select></div>
+            <div class="field"><label for="pPag">Pagamento</label><select id="pPag"></select></div>
+          </div>
+          <div class="toolbar" style="justify-content:space-between;align-items:center">
+            <div class="seg" role="group" aria-label="Modo de exibição"><button type="button" data-modo="compras" aria-pressed="true">Por compra</button><button type="button" data-modo="parcelas" aria-pressed="false">Por fatura (parcelas)</button></div>
+            <div class="btnrow"><button type="button" class="btn ghost sm" id="pClear">Limpar filtros</button><button type="button" class="btn sm" id="pCsv">Exportar CSV</button></div>
+          </div>
+        </div>
+        <div class="panel" style="padding:0;gap:0">
+          <div class="sheetscroll tablewrap"><table class="sheet" id="sheet"><thead id="sheetHead"></thead><tbody id="sheetBody"></tbody><tfoot id="sheetFoot"></tfoot></table></div>
+          <div class="empty" id="sheetEmpty" style="padding:18px" hidden>Nenhum lançamento com esses filtros.</div>
+        </div>
+      </section>
+
+      <!-- CARTÕES -->
+      <section class="page" id="pg-cartoes" hidden>
+        <div class="cards" id="cardGrid"></div>
+      </section>
+
+      <!-- AJUSTES -->
+      <section class="page" id="pg-ajustes" hidden>
+        <div class="g2e">
+          <div class="panel"><div class="panel-head"><h2>Categorias de despesa</h2></div><div class="tags" id="catDList"></div><div class="addrow"><input id="newCatD" placeholder="Nova categoria" aria-label="Nova categoria de despesa"><button type="button" class="btn sm" data-addcat="catDespesa">Adicionar</button></div></div>
+          <div class="panel"><div class="panel-head"><h2>Categorias de receita</h2></div><div class="tags" id="catRList"></div><div class="addrow"><input id="newCatR" placeholder="Nova categoria" aria-label="Nova categoria de receita"><button type="button" class="btn sm" data-addcat="catReceita">Adicionar</button></div></div>
+        </div>
+        <div class="g2e">
+          <div class="panel">
+            <div class="panel-head"><h2>Seus dados</h2><span class="hint" id="dataCount"></span></div>
+            <p class="muted" style="font-size:.9rem">Faça um backup de vez em quando. O arquivo de backup também serve para trazer dados de outra versão do app.</p>
+            <div class="btnrow"><button type="button" class="btn ghost" id="bBackup">Baixar backup (JSON)</button><button type="button" class="btn ghost" id="bCsvAll">Exportar tudo (CSV)</button></div>
+            <div class="btnrow"><label class="btn ghost filepick" for="importFile">Importar backup (JSON)<input type="file" id="importFile" accept=".json,application/json"></label></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Conta e aparência</h2></div>
+            <div class="field"><label>Conectado como</label><div class="gname" id="userEmail2"></div></div>
+            <div class="field"><label>Tema</label><div class="seg" role="group" aria-label="Tema" id="temaSeg"><button type="button" data-tema="sistema">Sistema</button><button type="button" data-tema="claro">Claro</button><button type="button" data-tema="escuro">Escuro</button></div></div>
+            <div class="btnrow" style="max-width:260px"><button type="button" class="btn danger" data-logout>Sair da conta</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav class="bottomnav" id="bottomNav" aria-label="Menu"></nav>
+</div>
+
+<div class="scrim" id="cardModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
+    <div class="mh"><h2 id="cmTitle">Novo cartão</h2><button type="button" class="closex" id="cmClose" aria-label="Fechar">×</button></div>
+    <form id="cForm" novalidate>
+      <div class="field"><label for="cNome">Nome do cartão</label><input id="cNome" maxlength="60" placeholder="Ex.: Nubank, Itaú Personnalité"></div>
+      <div class="row2">
+        <div class="field"><label for="cFinal">Final do cartão</label><input id="cFinal" inputmode="numeric" maxlength="4" placeholder="4 últimos dígitos"></div>
+        <div class="field"><label>Modalidade</label><div class="seg" role="group" aria-label="Modalidade" id="cMod"><button type="button" data-mod="credito" aria-pressed="true">Crédito</button><button type="button" data-mod="debito" aria-pressed="false">Débito</button></div></div>
+      </div>
+      <div id="cCredit" style="display:flex;flex-direction:column;gap:13px">
+        <div class="field"><label for="cLimite">Limite</label><div class="money"><span>R$</span><input id="cLimite" inputmode="decimal" placeholder="0,00"></div></div>
+        <div class="row2">
+          <div class="field"><label for="cFech">Dia de fechamento</label><select id="cFech"></select></div>
+          <div class="field"><label for="cVenc">Dia de vencimento</label><select id="cVenc"></select></div>
+        </div>
+      </div>
+      <div class="field"><label>Cor</label><div class="swatches" id="cCor"></div></div>
+      <p class="sub">Guardamos só os 4 últimos dígitos. O número completo não é necessário para controlar gastos.</p>
+      <div class="btnrow"><button class="btn" type="submit" id="cSave">Salvar cartão</button><button class="btn danger" type="button" id="cDel" hidden>Excluir</button></div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
